@@ -1,0 +1,43 @@
+name: Ошибка
+description: Поведение клиента не совпадает с ожиданием
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Не вставляйте API-ключ, sign и token. Для уязвимостей используйте Security Advisories.
+  - type: input
+    id: version
+    attributes:
+      label: Версия модуля
+      description: Тег или вывод `go list -m github.com/Zoomish/go-ggsel-api`
+      placeholder: v0.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: contour
+    attributes:
+      label: Контур
+      options:
+        - v1
+        - v2
+    validations:
+      required: true
+  - type: input
+    id: method
+    attributes:
+      label: Метод
+      placeholder: ListOffers
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Что ожидали
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Что произошло
+    validations:
+      required: true

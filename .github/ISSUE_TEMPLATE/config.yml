@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Уязвимость
+    url: https://github.com/Zoomish/go-ggsel-api/security/advisories/new
+    about: Сообщайте приватно. Не прикладывайте API-ключ, sign и token.
