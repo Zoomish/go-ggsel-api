@@ -19,6 +19,7 @@ func ExampleNew() {
 	if err != nil || client == nil {
 		panic(err)
 	}
+	// Output:
 }
 
 func ExampleClient_ListOffers() {
@@ -52,6 +53,7 @@ func ExampleClient_ListOffers() {
 	if len(page.Offers) != 1 || page.Offers[0].Price == nil || page.Offers[0].Price.String() != "19.99" {
 		panic(page.Offers)
 	}
+	// Output:
 }
 
 func ExampleClient_UpdateOffer() {
@@ -95,6 +97,7 @@ func ExampleClient_UpdateOffer() {
 	if raw != `{"price":19.99,"is_autoselling":false}` || strings.Contains(raw, "title_ru") {
 		panic(raw)
 	}
+	// Output:
 }
 
 func ExampleClient_GetOrder() {
@@ -122,4 +125,5 @@ func ExampleClient_GetOrder() {
 	if !errors.As(err, &apiErr) || apiErr.StatusCode != http.StatusUnauthorized {
 		panic(err)
 	}
+	// Output:
 }

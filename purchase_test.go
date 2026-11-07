@@ -89,8 +89,8 @@ func TestGetOrderRetval(t *testing.T) {
 	c := newTestClient(t, srv.URL, Options{APIKey: "secret", SellerID: 4, Clock: func() time.Time { return now }})
 	_, err := c.GetOrder(context.Background(), 3)
 	var apiErr *APIError
-	if !errors.As(err, &apiErr) || apiErr.RetVal == nil || *apiErr.RetVal != 2 || apiErr.RetDesc != "denied" {
-		t.Fatalf("error = %v", err)
+	if !errors.As(err, &apiErr) || apiErr.RetVal == nil || *apiErr.RetVal != 2 || apiErr.RetDesc != "denied" || apiErr.StatusCode != http.StatusOK {
+		t.Fatalf("error = %+v", apiErr)
 	}
 }
 
@@ -198,5 +198,10 @@ func TestCheckUniqueCodeRequiresCode(t *testing.T) {
 	})
 	if _, err := c.CheckUniqueCode(context.Background(), "  "); err == nil {
 		t.Fatal("blank code was accepted")
+	}
+	for _, code := range []string{".", ".."} {
+		if _, err := c.CheckUniqueCode(context.Background(), code); err == nil {
+			t.Fatalf("code %q was accepted", code)
+		}
 	}
 }

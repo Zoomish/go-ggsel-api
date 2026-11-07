@@ -65,6 +65,9 @@ func (t *retryTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 			return resp, nil
 		}
 		wait := retryDelay(resp, t.backoff(attempt), t.now())
+		if !pauseFits(req.Context(), wait) {
+			return resp, nil
+		}
 		drain(resp)
 		if sleepErr := t.wait(req.Context(), wait); sleepErr != nil {
 			return nil, sleepErr
@@ -78,6 +81,17 @@ func (t *retryTripper) now() time.Time {
 		return time.Now()
 	}
 	return t.client.now()
+}
+
+func pauseFits(ctx context.Context, wait time.Duration) bool {
+	if wait <= 0 {
+		return true
+	}
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		return true
+	}
+	return time.Until(deadline) > wait
 }
 
 func (t *retryTripper) wait(ctx context.Context, d time.Duration) error {

@@ -17,7 +17,9 @@ const v1TokenSkew = 30 * time.Second
 // ErrSellerIDRequired возвращается, если метод v1 вызван без SellerID.
 var ErrSellerIDRequired = errors.New("ggsel: seller id is required")
 
-// Login получает token v1 и кладёт его в кэш до valid_thru.
+// Login получает token v1.
+// Кэш пустеет за 30 секунд до valid_thru.
+// Если valid_thru не разбирается, token этого вызова возвращается, но в кэш не кладётся.
 // Методы v1 вызывают вход сами, если кэш пуст.
 func (c *Client) Login(ctx context.Context) error {
 	_, err := c.v1Token(ctx)
@@ -28,23 +30,34 @@ func (c *Client) v1Token(ctx context.Context) (string, error) {
 	if c.sellerID <= 0 {
 		return "", ErrSellerIDRequired
 	}
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
 	if token, ok := c.cachedV1(); ok {
 		return token, nil
 	}
-	v, err, _ := c.v1Group.Do("v1", func() (any, error) {
+	ch := c.v1Group.DoChan("v1", func() (any, error) {
 		if token, ok := c.cachedV1(); ok {
 			return token, nil
 		}
-		return c.apilogin(ctx)
+		return c.apilogin(context.WithoutCancel(ctx))
 	})
-	if err != nil {
-		return "", err
+	select {
+	case <-ctx.Done():
+		return "", ctx.Err()
+	case res := <-ch:
+		if err := ctx.Err(); err != nil {
+			return "", err
+		}
+		if res.Err != nil {
+			return "", res.Err
+		}
+		token, _ := res.Val.(string)
+		if token == "" {
+			return "", fmt.Errorf("ggsel: apilogin: empty token")
+		}
+		return token, nil
 	}
-	token, _ := v.(string)
-	if token == "" {
-		return "", fmt.Errorf("ggsel: apilogin: empty token")
-	}
-	return token, nil
 }
 
 func (c *Client) cachedV1() (string, bool) {

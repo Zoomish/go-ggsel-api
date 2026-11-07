@@ -17,7 +17,6 @@ var errEmptyData = errors.New("empty data")
 // OfferStatus — статус оффера в карточке и списке.
 type OfferStatus string
 
-// Значения статуса оффера.
 const (
 	OfferStatusDraft    OfferStatus = "draft"
 	OfferStatusActive   OfferStatus = "active"
@@ -28,7 +27,6 @@ const (
 // OfferListStatus — фильтр списка. Archived в этот фильтр не входит.
 type OfferListStatus string
 
-// Значения фильтра списка. Archived сюда не входит.
 const (
 	OfferListStatusActive OfferListStatus = "active"
 	OfferListStatusPaused OfferListStatus = "paused"
@@ -38,7 +36,6 @@ const (
 // Delivery — способ выдачи оффера.
 type Delivery string
 
-// Значения способа выдачи.
 const (
 	DeliveryAuto   Delivery = "auto"
 	DeliveryManual Delivery = "manual"
@@ -47,7 +44,6 @@ const (
 // Currency — валюта цены оффера v2. В спецификации это RUB.
 type Currency string
 
-// Валюта цены v2.
 const (
 	CurrencyRUB Currency = "RUB"
 )
@@ -55,7 +51,6 @@ const (
 // OfferSort — сортировка списка офферов.
 type OfferSort string
 
-// Варианты сортировки списка офферов.
 const (
 	OfferSortPriceAsc          OfferSort = "price_asc"
 	OfferSortPriceDesc         OfferSort = "price_desc"
@@ -68,7 +63,6 @@ const (
 // NotificationType — канал уведомления продавца о заказе.
 type NotificationType string
 
-// Каналы уведомления о заказе.
 const (
 	NotificationEmail NotificationType = "email"
 	NotificationURL   NotificationType = "url"
@@ -77,7 +71,6 @@ const (
 // NotificationMethod — HTTP-метод уведомления.
 type NotificationMethod string
 
-// HTTP-методы уведомления.
 const (
 	NotificationMethodGET  NotificationMethod = "GET"
 	NotificationMethodPOST NotificationMethod = "POST"

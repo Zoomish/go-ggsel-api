@@ -342,7 +342,7 @@ func testDecimal(t *testing.T, raw string) Decimal {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return Decimal{Decimal: d}
+	return decimalOf(d)
 }
 
 func jsonServer(t *testing.T, body string) *httptest.Server {

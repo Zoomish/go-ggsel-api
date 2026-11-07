@@ -15,8 +15,8 @@ import (
 
 func TestOfferWriteJSON(t *testing.T) {
 	t.Parallel()
-	price := Decimal{Decimal: decimal.RequireFromString("19.99")}
-	zero := Decimal{Decimal: decimal.NewFromInt(0)}
+	price := decimalOf(decimal.RequireFromString("19.99"))
+	zero := decimalOf(decimal.NewFromInt(0))
 	tests := []struct {
 		name   string
 		method string

@@ -85,7 +85,10 @@ func TestRetryRecovers(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	var waits []time.Duration
-	c := newTestClient(t, srv.URL, Options{APIKey: "k"})
+	c := newTestClient(t, srv.URL, Options{
+		APIKey:     "k",
+		HTTPClient: &http.Client{Timeout: time.Minute},
+	})
 	c.sleep = func(_ context.Context, d time.Duration) error {
 		waits = append(waits, d)
 		return nil
@@ -113,7 +116,7 @@ func TestRetryRecovers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !out.Price.Equal(Decimal{Decimal: want}) {
+	if !out.Price.Equal(decimalOf(want)) {
 		t.Fatalf("price = %s", out.Price)
 	}
 }
@@ -154,6 +157,7 @@ func TestRetryAfterIsCapped(t *testing.T) {
 				RetryBackoffMin: 100 * time.Millisecond,
 				RetryBackoffMax: 2 * time.Second,
 				Clock:           func() time.Time { return now },
+				HTTPClient:      &http.Client{Timeout: time.Minute},
 			})
 			c.sleep = func(_ context.Context, d time.Duration) error {
 				got = d
@@ -310,6 +314,30 @@ func TestSleepContext(t *testing.T) {
 	}
 	if err := sleepContext(context.Background(), 0); err != nil {
 		t.Fatalf("zero sleep: %v", err)
+	}
+}
+
+func TestRetryAfterReturnsStatusWhenPauseExceedsDeadline(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Retry-After", "60")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = io.WriteString(w, `{"errors":[{"code":"BUSY"}]}`)
+	}))
+	t.Cleanup(srv.Close)
+	c := newTestClient(t, srv.URL, Options{
+		APIKey: "k",
+		HTTPClient: &http.Client{
+			Timeout: 200 * time.Millisecond,
+		},
+	})
+	c.sleep = sleepContext
+	_, err := c.ListOffers(context.Background(), ListOffersParams{})
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) || apiErr.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("error = %v", err)
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		t.Fatal("deadline replaced the API status")
 	}
 }
 

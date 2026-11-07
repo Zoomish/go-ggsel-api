@@ -119,7 +119,7 @@ func TestDoAuthAndBody(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	c := newTestClient(t, srv.URL, Options{APIKey: "  " + key + "  "})
-	price := Decimal{Decimal: decimal.RequireFromString("19.99")}
+	price := decimalOf(decimal.RequireFromString("19.99"))
 	off := false
 	body := struct {
 		Title *string  `json:"title,omitempty"`

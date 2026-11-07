@@ -273,3 +273,150 @@ func TestSellerIDRequired(t *testing.T) {
 		t.Fatalf("error = %v", err)
 	}
 }
+
+func TestInvalidateV1KeepsFreshToken(t *testing.T) {
+	t.Parallel()
+	c, err := New(Options{APIKey: "k"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	until := time.Now().Add(time.Hour)
+	c.storeV1("fresh", until)
+	c.invalidateV1("stale")
+	token, ok := c.cachedV1()
+	if !ok || token != "fresh" {
+		t.Fatalf("token = %q ok=%v", token, ok)
+	}
+}
+
+func TestUnparsedValidThruIsNotCached(t *testing.T) {
+	t.Parallel()
+	var logins atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.URL.Path == "/api_sellers/api/apilogin" {
+			logins.Add(1)
+			_, _ = io.WriteString(w, `{"retval":0,"token":"once","valid_thru":"tomorrow"}`)
+			return
+		}
+		_, _ = io.WriteString(w, `{"retval":0,"content":{"amount":1,"invoice_state":1}}`)
+	}))
+	t.Cleanup(srv.Close)
+	c := newTestClient(t, srv.URL, Options{APIKey: "secret", SellerID: 4})
+	if _, err := c.GetOrder(context.Background(), 1); err != nil {
+		t.Fatalf("first: %v", err)
+	}
+	if _, err := c.GetOrder(context.Background(), 1); err != nil {
+		t.Fatalf("second: %v", err)
+	}
+	if logins.Load() != 2 {
+		t.Fatalf("logins = %d", logins.Load())
+	}
+}
+
+func TestTokenSkewBoundary(t *testing.T) {
+	t.Parallel()
+	valid := time.Date(2026, 1, 2, 4, 4, 5, 0, time.UTC)
+	now := valid.Add(-time.Hour)
+	current := now
+	var logins atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.URL.Path == "/api_sellers/api/apilogin" {
+			logins.Add(1)
+			_, _ = io.WriteString(w, `{"retval":0,"token":"tok","valid_thru":"2026-01-02T04:04:05Z"}`)
+			return
+		}
+		_, _ = io.WriteString(w, `{"retval":0,"content":{"amount":1,"invoice_state":1}}`)
+	}))
+	t.Cleanup(srv.Close)
+	c := newTestClient(t, srv.URL, Options{
+		APIKey:   "secret",
+		SellerID: 4,
+		Clock:    func() time.Time { return current },
+	})
+	if _, err := c.GetOrder(context.Background(), 1); err != nil {
+		t.Fatal(err)
+	}
+	current = valid.Add(-31 * time.Second)
+	if _, err := c.GetOrder(context.Background(), 1); err != nil {
+		t.Fatal(err)
+	}
+	if logins.Load() != 1 {
+		t.Fatalf("logins inside skew window = %d", logins.Load())
+	}
+	current = valid.Add(-29 * time.Second)
+	if _, err := c.GetOrder(context.Background(), 1); err != nil {
+		t.Fatal(err)
+	}
+	if logins.Load() != 2 {
+		t.Fatalf("logins past skew = %d", logins.Load())
+	}
+}
+
+func TestCanceledLeaderDoesNotFailWaiter(t *testing.T) {
+	t.Parallel()
+	var logins atomic.Int32
+	started := make(chan struct{})
+	release := make(chan struct{})
+	var once sync.Once
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.URL.Path == "/api_sellers/api/apilogin" {
+			logins.Add(1)
+			once.Do(func() { close(started) })
+			<-release
+			_, _ = io.WriteString(w, `{"retval":0,"token":"tok","valid_thru":"2026-01-02T05:04:05Z"}`)
+			return
+		}
+		_, _ = io.WriteString(w, `{"retval":0,"content":{"amount":19.99,"invoice_state":3}}`)
+	}))
+	t.Cleanup(srv.Close)
+	now := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	c := newTestClient(t, srv.URL, Options{
+		APIKey:   "secret",
+		SellerID: 7,
+		Clock:    func() time.Time { return now },
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	leader := make(chan error, 1)
+	go func() {
+		_, err := c.GetOrder(ctx, 1)
+		leader <- err
+	}()
+	select {
+	case <-started:
+	case <-time.After(2 * time.Second):
+		t.Fatal("login did not start")
+	}
+	cancel()
+	select {
+	case err := <-leader:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("leader = %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("leader did not return")
+	}
+	waiter := make(chan error, 1)
+	go func() {
+		_, err := c.GetOrder(context.Background(), 1)
+		waiter <- err
+	}()
+	time.Sleep(50 * time.Millisecond)
+	close(release)
+	select {
+	case err := <-waiter:
+		if err != nil {
+			t.Fatalf("waiter = %v", err)
+		}
+		if errors.Is(err, context.Canceled) {
+			t.Fatal("waiter inherited the leader cancel")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("waiter did not return")
+	}
+	if logins.Load() != 1 {
+		t.Fatalf("logins = %d", logins.Load())
+	}
+}

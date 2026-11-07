@@ -9,13 +9,12 @@ import (
 
 // Decimal — точное десятичное число для полей schema type number.
 // В JSON это число, не строка и не float64.
-// Арифметика доступна через вложенный decimal.Decimal.
 type Decimal struct {
-	decimal.Decimal
+	value decimal.Decimal
 }
 
 func (d Decimal) MarshalJSON() ([]byte, error) {
-	return []byte(d.String()), nil
+	return []byte(d.value.String()), nil
 }
 
 func (d *Decimal) UnmarshalJSON(raw []byte) error {
@@ -30,14 +29,18 @@ func (d *Decimal) UnmarshalJSON(raw []byte) error {
 	if err := inner.UnmarshalJSON(raw); err != nil {
 		return fmt.Errorf("ggsel: unmarshal decimal: %w", err)
 	}
-	d.Decimal = inner
+	d.value = inner
 	return nil
 }
 
 func (d Decimal) Equal(other Decimal) bool {
-	return d.Decimal.Equal(other.Decimal)
+	return d.value.Equal(other.value)
 }
 
 func (d Decimal) String() string {
-	return d.Decimal.String()
+	return d.value.String()
+}
+
+func decimalOf(d decimal.Decimal) Decimal {
+	return Decimal{value: d}
 }
