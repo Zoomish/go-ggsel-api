@@ -2,6 +2,7 @@ package ggsel
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/shopspring/decimal"
@@ -66,11 +67,16 @@ func TestDecimalPointerOmitempty(t *testing.T) {
 func TestDecimalNullAndNegative(t *testing.T) {
 	t.Parallel()
 	var value Decimal
-	if err := json.Unmarshal([]byte(`null`), &value); err != nil {
-		t.Fatal(err)
+	err := json.Unmarshal([]byte(`null`), &value)
+	if err == nil || strings.Contains(err.Error(), "ggsel:") {
+		t.Fatalf("null err = %v", err)
 	}
-	if value.String() != "0" {
-		t.Fatalf("null = %s", value)
+	parsed, err := ParseDecimal("19.99")
+	if err != nil || parsed.String() != "19.99" {
+		t.Fatalf("parse = %s %v", parsed, err)
+	}
+	if _, err := ParseDecimal("nope"); err == nil || !strings.Contains(err.Error(), "ggsel:") {
+		t.Fatalf("bad parse = %v", err)
 	}
 	var negative Decimal
 	if err := json.Unmarshal([]byte(`-19.99`), &negative); err != nil {

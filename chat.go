@@ -9,17 +9,16 @@ import (
 	"strings"
 )
 
-// Chat — диалог с покупателем.
 type Chat struct {
-	InvoiceID    int64  `json:"id_i"`
-	Email        string `json:"email"`
-	ProductID    int64  `json:"product"`
-	LastMessage  string `json:"last_message"`
-	MessageCount *int64 `json:"cnt_msg"`
-	NewCount     *int64 `json:"cnt_new"`
+	InvoiceID int64  `json:"id_i"`
+	Email     string `json:"email"`
+	ProductID int64  `json:"product"`
+	// LastMessageAt — метка времени последнего сообщения. В снимке это строка date_time, не текст реплики.
+	LastMessageAt string `json:"last_message"`
+	MessageCount  *int64 `json:"cnt_msg"`
+	NewCount      *int64 `json:"cnt_new"`
 }
 
-// ChatPage — страница списка чатов.
 type ChatPage struct {
 	PageCount int64  `json:"cnt_pages"`
 	Items     []Chat `json:"items"`
@@ -34,20 +33,20 @@ type ListChatsParams struct {
 	Page      *int64
 }
 
-// Message — сообщение переписки.
 type Message struct {
-	ID          int64   `json:"id"`
-	Text        string  `json:"message"`
-	Buyer       int64   `json:"buyer"`
-	Seller      int64   `json:"seller"`
-	Deleted     *int64  `json:"deleted"`
-	DateWritten string  `json:"date_written"`
-	DateSeen    *string `json:"date_seen"`
-	IsFile      *int64  `json:"is_file"`
-	Filename    *string `json:"filename"`
-	URL         *string `json:"url"`
-	IsImage     *int64  `json:"is_img"`
-	Preview     *string `json:"preview"`
+	ID   int64  `json:"id"`
+	Text string `json:"message"`
+	// IsFromBuyer и IsFromSeller — флаги «сообщение от покупателя / продавца», не идентификаторы.
+	IsFromBuyer  int64   `json:"buyer"`
+	IsFromSeller int64   `json:"seller"`
+	Deleted      *int64  `json:"deleted"`
+	DateWritten  string  `json:"date_written"`
+	DateSeen     *string `json:"date_seen"`
+	IsFile       *int64  `json:"is_file"`
+	Filename     *string `json:"filename"`
+	URL          *string `json:"url"`
+	IsImage      *int64  `json:"is_img"`
+	Preview      *string `json:"preview"`
 }
 
 // ListMessagesParams — окно сообщений. id_i задаёт метод.
@@ -58,7 +57,6 @@ type ListMessagesParams struct {
 	Count  *int64
 }
 
-// ListChats возвращает страницу чатов.
 func (c *Client) ListChats(ctx context.Context, params ListChatsParams) (ChatPage, error) {
 	q := url.Values{}
 	setInt(q, "filter_new", params.FilterNew)

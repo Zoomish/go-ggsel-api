@@ -24,7 +24,7 @@ func TestListChats(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = io.WriteString(w, `{
 			"cnt_pages":2,
-			"items":[{"id_i":15,"email":"buyer@example.com","product":3,"last_message":"hi","cnt_msg":4,"cnt_new":null}]
+			"items":[{"id_i":15,"email":"buyer@example.com","product":3,"last_message":"2026-01-01T00:00:00Z","cnt_msg":4,"cnt_new":null}]
 		}`)
 	})
 	c := newV1Client(t, srv)
@@ -32,7 +32,7 @@ func TestListChats(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListChats: %v", err)
 	}
-	if page.PageCount != 2 || len(page.Items) != 1 || page.Items[0].InvoiceID != 15 || page.Items[0].NewCount != nil {
+	if page.PageCount != 2 || len(page.Items) != 1 || page.Items[0].InvoiceID != 15 || page.Items[0].LastMessageAt != "2026-01-01T00:00:00Z" || page.Items[0].NewCount != nil {
 		t.Fatalf("page = %+v", page)
 	}
 	if page.Items[0].MessageCount == nil || *page.Items[0].MessageCount != 4 {
@@ -57,7 +57,7 @@ func TestListMessages(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListMessages: %v", err)
 	}
-	if len(items) != 1 || items[0].Text != "hi" || items[0].ID != 1 {
+	if len(items) != 1 || items[0].Text != "hi" || items[0].ID != 1 || items[0].IsFromBuyer != 2 || items[0].IsFromSeller != 3 {
 		t.Fatalf("items = %+v", items)
 	}
 	if !strings.Contains(query, "id_i=15") || !strings.Contains(query, "count=10") || !strings.Contains(query, "token=tok") || strings.Contains(query, "id_from=") || strings.Contains(query, "newer=") {

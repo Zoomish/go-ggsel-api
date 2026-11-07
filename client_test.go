@@ -268,7 +268,7 @@ func TestDoTransportErrorHidesURL(t *testing.T) {
 			t.Fatalf("error chain leaks request: %s", text)
 		}
 	}
-	if !strings.Contains(err.Error(), "request failed") {
+	if !strings.Contains(err.Error(), "request failed") || !strings.Contains(err.Error(), "dial") {
 		t.Fatalf("error = %s", err.Error())
 	}
 }

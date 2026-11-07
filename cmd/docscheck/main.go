@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 	"unicode/utf16"
+	"unicode/utf8"
 )
 
 const docsPage = "https://seller.ggsel.com/docs/"
@@ -541,6 +542,21 @@ func jsUnescape(s string) string {
 				b.WriteByte(s[i])
 				continue
 			}
+			if utf16.IsSurrogate(r) {
+				if i+12 <= len(s) && s[i+6] == '\\' && s[i+7] == 'u' {
+					if r2, ok2 := parseHex4(s[i+8 : i+12]); ok2 {
+						pair := utf16.DecodeRune(r, r2)
+						if pair != utf8.RuneError {
+							b.WriteRune(pair)
+							i += 11
+							continue
+						}
+					}
+				}
+				b.WriteRune(utf8.RuneError)
+				i += 5
+				continue
+			}
 			b.WriteRune(r)
 			i += 5
 		default:
@@ -567,11 +583,7 @@ func parseHex4(s string) (rune, bool) {
 		}
 		n = n<<4 | uint16(d)
 	}
-	r := rune(n)
-	if utf16.IsSurrogate(r) {
-		return r, true
-	}
-	return r, true
+	return rune(n), true
 }
 
 func stringField(m map[string]any, key string) string {
@@ -596,21 +608,8 @@ func unified(name string, current, live []byte) string {
 	b := strings.Split(string(live), "\n")
 	var out []string
 	out = append(out, "--- "+name+".committed", "+++ "+name+".live")
-	i, j := 0, 0
-	for i < len(a) || j < len(b) {
-		if i < len(a) && j < len(b) && a[i] == b[j] {
-			i++
-			j++
-			continue
-		}
-		if i < len(a) {
-			out = append(out, "-"+a[i])
-			i++
-		}
-		if j < len(b) {
-			out = append(out, "+"+b[j])
-			j++
-		}
+	for _, edit := range lineEdits(a, b) {
+		out = append(out, string(edit.op)+edit.text)
 	}
 	return strings.Join(out, "\n")
 }

@@ -63,7 +63,7 @@ order, err := client.GetOrder(ctx, invoiceID)
 
 ## Деньги и частичное обновление
 
-Цены и суммы — `ggsel.Decimal` поверх `shopspring/decimal`, не `float64`. В JSON уходит число.
+Цены и суммы — `ggsel.Decimal` поверх `shopspring/decimal`, не `float64`. В JSON уходит число. Значение из строки собирает `ParseDecimal`.
 
 В `OfferWrite` nil-поле не сериализуется. `Ptr(false)`, ноль и пустая строка уходят.
 
@@ -93,9 +93,13 @@ if ggsel.IsUnauthorized(err) {
 
 ## Что входит в модуль
 
-Сейчас это офферы и категории v2, а в v1 — заказ, уникальный код и чаты. Полный список методов — на [pkg.go.dev](https://pkg.go.dev/github.com/Zoomish/go-ggsel-api).
+Один клиент на оба контура. Полный список методов — на [pkg.go.dev](https://pkg.go.dev/github.com/Zoomish/go-ggsel-api).
 
-В модуле нет пакетных activate/pause/delete, опций, товаров, остальных методов v1 и XML `shop_search.asp`.
+v2: офферы, категории, опции и варианты, склад и ключи вариантов, пакетные activate/pause/delete, статус async job, обход страниц по `HasNextPage`.
+
+v1: вход по подписи, заказ, уникальный код, чаты, категории и товары, карточка товара, товары продавца, баланс, чеки, массовые цены и статус этой задачи, отзывы, последние продажи.
+
+В модуле нет XML `shop_search.asp`. Клиент не опрашивает job в цикле и не добавляет query `page` там, где его нет в снимке.
 
 ## Контракт
 

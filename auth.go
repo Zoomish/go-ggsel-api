@@ -15,7 +15,8 @@ import (
 const v1TokenSkew = 30 * time.Second
 
 // ErrSellerIDRequired возвращается, если метод v1 вызван без SellerID.
-var ErrSellerIDRequired = errors.New("ggsel: seller id is required")
+// Префикс ggsel: добавляет обёртка, не сам sentinel.
+var ErrSellerIDRequired = errors.New("seller id is required")
 
 // Login получает token v1.
 // Кэш пустеет за 30 секунд до valid_thru.
@@ -28,7 +29,7 @@ func (c *Client) Login(ctx context.Context) error {
 
 func (c *Client) v1Token(ctx context.Context) (string, error) {
 	if c.sellerID <= 0 {
-		return "", ErrSellerIDRequired
+		return "", fmt.Errorf("ggsel: %w", ErrSellerIDRequired)
 	}
 	if err := ctx.Err(); err != nil {
 		return "", err
@@ -40,7 +41,9 @@ func (c *Client) v1Token(ctx context.Context) (string, error) {
 		if token, ok := c.cachedV1(); ok {
 			return token, nil
 		}
-		return c.apilogin(context.WithoutCancel(ctx))
+		loginCtx, cancel := c.detachLogin(ctx)
+		defer cancel()
+		return c.apilogin(loginCtx)
 	})
 	select {
 	case <-ctx.Done():
@@ -133,6 +136,20 @@ func (c *Client) apilogin(ctx context.Context) (string, error) {
 		c.storeV1(resp.Token, until)
 	}
 	return resp.Token, nil
+}
+
+func (c *Client) detachLogin(parent context.Context) (context.Context, context.CancelFunc) {
+	base := context.WithoutCancel(parent)
+	deadline, ok := parent.Deadline()
+	timeout := defaultTimeout
+	if c.http != nil && c.http.Timeout > 0 {
+		timeout = c.http.Timeout
+	}
+	clientDeadline := time.Now().Add(timeout)
+	if !ok || clientDeadline.Before(deadline) {
+		deadline = clientDeadline
+	}
+	return context.WithDeadline(base, deadline)
 }
 
 func signV1(apiKey, timestamp string) string {

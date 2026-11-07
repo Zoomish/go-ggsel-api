@@ -41,7 +41,7 @@ order, err := client.GetOrder(ctx, invoiceID)
 
 ## Money and partial updates
 
-Prices and amounts are `ggsel.Decimal`, not `float64`. A nil field on `OfferWrite` is omitted. `Ptr(false)`, zero, and an empty string are sent.
+Prices and amounts are `ggsel.Decimal`, not `float64`. `ParseDecimal` builds one from a string. A nil field on `OfferWrite` is omitted. `Ptr(false)`, zero, and an empty string are sent.
 
 ## Errors and retries
 
@@ -51,7 +51,13 @@ Only safe GET calls are retried. A 401, a failed `apilogin`, and any POST or PAT
 
 ## Scope
 
-The module currently covers v2 offers and categories, plus v1 orders, unique codes, and chats. Batch activate/pause/delete, options, products, the rest of v1, and the XML `shop_search.asp` method are not included. Method list: [pkg.go.dev](https://pkg.go.dev/github.com/Zoomish/go-ggsel-api).
+One client covers both contours. Method list: [pkg.go.dev](https://pkg.go.dev/github.com/Zoomish/go-ggsel-api).
+
+v2: offers, categories, options and variants, stock and variant keys, batch activate/pause/delete, async job status, and page walks that follow `HasNextPage`.
+
+v1: signed login, orders, unique codes, chats, categories and products, the product card, seller goods, balance, receipts, bulk prices and that task's status, reviews, and last sales.
+
+The XML `shop_search.asp` method is not included. The client does not poll jobs and does not add a `page` query the snapshot does not declare.
 
 Paths and fields follow the public Seller API documentation. The module does not fetch the spec. Both snapshots are [testdata/seller-api-v1.openapi.json](testdata/seller-api-v1.openapi.json) and [testdata/seller-api-v2.openapi.json](testdata/seller-api-v2.openapi.json). `go run ./cmd/docscheck` compares them with the live docs once a month. Report vulnerabilities as in [SECURITY.md](SECURITY.md).
 

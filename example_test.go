@@ -84,8 +84,8 @@ func ExampleClient_UpdateOffer() {
 	if err != nil {
 		panic(err)
 	}
-	price := ggsel.Decimal{}
-	if err := price.UnmarshalJSON([]byte("19.99")); err != nil {
+	price, err := ggsel.ParseDecimal("19.99")
+	if err != nil {
 		panic(err)
 	}
 	if _, err := client.UpdateOffer(context.Background(), 15, ggsel.OfferWrite{

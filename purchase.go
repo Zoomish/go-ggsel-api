@@ -83,7 +83,6 @@ type OrderOption struct {
 	UserDataID *int64  `json:"user_data_id"`
 }
 
-// Buyer — покупатель заказа.
 type Buyer struct {
 	PaymentMethod     string  `json:"payment_method"`
 	Account           string  `json:"account"`
@@ -158,7 +157,6 @@ func (c *Client) GetOrder(ctx context.Context, invoiceID int64) (Order, error) {
 	return env.Content, nil
 }
 
-// CheckUniqueCode проверяет уникальный код заказа.
 func (c *Client) CheckUniqueCode(ctx context.Context, code string) (UniqueCode, error) {
 	if strings.TrimSpace(code) == "" {
 		return UniqueCode{}, fmt.Errorf("ggsel: check unique code: code is required")

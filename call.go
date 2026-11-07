@@ -185,7 +185,41 @@ func (c *Client) failTransport(method, path string, err error) error {
 	if errors.Is(err, context.DeadlineExceeded) {
 		return fmt.Errorf("ggsel: %s %s: %w", method, path, context.DeadlineExceeded)
 	}
-	return fmt.Errorf("ggsel: %s %s: %w", method, path, errRequestFailed)
+	cause := redactTransport(c.apiKey, err)
+	if cause == "" {
+		return fmt.Errorf("ggsel: %s %s: %w", method, path, errRequestFailed)
+	}
+	return fmt.Errorf("ggsel: %s %s: %w: %s", method, path, errRequestFailed, cause)
+}
+
+func redactTransport(apiKey string, err error) string {
+	text := err.Error()
+	var urlErr *url.Error
+	if errors.As(err, &urlErr) && urlErr.Err != nil {
+		text = urlErr.Err.Error()
+	}
+	text = cutURLs(text)
+	if apiKey != "" {
+		text = strings.ReplaceAll(text, apiKey, "")
+	}
+	return strings.Join(strings.Fields(text), " ")
+}
+
+func cutURLs(s string) string {
+	for _, scheme := range []string{"https://", "http://"} {
+		for {
+			i := strings.Index(s, scheme)
+			if i < 0 {
+				break
+			}
+			j := i + len(scheme)
+			for j < len(s) && s[j] != ' ' && s[j] != '"' && s[j] != '\'' {
+				j++
+			}
+			s = s[:i] + s[j:]
+		}
+	}
+	return s
 }
 
 func readLimited(r io.Reader, limit int) ([]byte, error) {

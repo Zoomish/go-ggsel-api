@@ -164,13 +164,19 @@ func TestLoginRetvalDoesNotCache(t *testing.T) {
 		_, _ = io.WriteString(w, `{"retval":3,"desc":"bad sign","token":"should-not-cache"}`)
 	}))
 	t.Cleanup(srv.Close)
-	c := newTestClient(t, srv.URL, Options{APIKey: "secret", SellerID: 7})
+	now := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	c := newTestClient(t, srv.URL, Options{
+		APIKey:   "secret",
+		SellerID: 7,
+		Clock:    func() time.Time { return now },
+	})
 	err := c.Login(context.Background())
 	var apiErr *APIError
 	if !errors.As(err, &apiErr) || apiErr.RetVal == nil || *apiErr.RetVal != 3 || apiErr.Desc != "bad sign" {
 		t.Fatalf("error = %v", err)
 	}
-	if strings.Contains(err.Error(), "secret") || strings.Contains(err.Error(), signV1("secret", "0")) || strings.Contains(err.Error(), "should-not-cache") {
+	sign := signV1("secret", strconv.FormatInt(now.Unix(), 10))
+	if strings.Contains(err.Error(), "secret") || strings.Contains(err.Error(), sign) || strings.Contains(err.Error(), "should-not-cache") {
 		t.Fatalf("error text leaks secrets: %s", err.Error())
 	}
 	if err := c.Login(context.Background()); err == nil {
@@ -418,5 +424,36 @@ func TestCanceledLeaderDoesNotFailWaiter(t *testing.T) {
 	}
 	if logins.Load() != 1 {
 		t.Fatalf("logins = %d", logins.Load())
+	}
+}
+
+func TestDetachLoginDeadline(t *testing.T) {
+	t.Parallel()
+	c := &Client{http: &http.Client{}}
+	ctx, cancel := c.detachLogin(context.Background())
+	defer cancel()
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		t.Fatal("zero timeout has no deadline")
+	}
+	left := time.Until(deadline)
+	if left < defaultTimeout-time.Second || left > defaultTimeout+time.Second {
+		t.Fatalf("deadline in %s", left)
+	}
+	parent, stop := context.WithTimeout(context.Background(), 40*time.Millisecond)
+	defer stop()
+	c.http.Timeout = time.Second
+	limited, stopLimited := c.detachLogin(parent)
+	defer stopLimited()
+	got, ok := limited.Deadline()
+	if !ok || time.Until(got) > 200*time.Millisecond {
+		t.Fatal("caller deadline was dropped")
+	}
+	parentCancel, cancelParent := context.WithCancel(context.Background())
+	child, stopChild := c.detachLogin(parentCancel)
+	cancelParent()
+	defer stopChild()
+	if child.Err() != nil {
+		t.Fatal("parent cancel reached the login context")
 	}
 }
