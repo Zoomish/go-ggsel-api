@@ -2,6 +2,7 @@ package ggsel_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -124,6 +125,55 @@ func ExampleClient_GetOrder() {
 	var apiErr *ggsel.APIError
 	if !errors.As(err, &apiErr) || apiErr.StatusCode != http.StatusUnauthorized {
 		panic(err)
+	}
+	// Output:
+}
+
+func ExampleParseDecimal() {
+	price, err := ggsel.ParseDecimal("19.99")
+	if err != nil {
+		panic(err)
+	}
+	raw, err := json.Marshal(struct {
+		Price *ggsel.Decimal `json:"price"`
+	}{Price: ggsel.Ptr(price)})
+	if err != nil {
+		panic(err)
+	}
+	if string(raw) != `{"price":19.99}` {
+		panic(string(raw))
+	}
+	if _, err := ggsel.ParseDecimal("nope"); err == nil {
+		panic("bad decimal")
+	}
+	// Output:
+}
+
+func ExampleClient_CreateOfferProducts() {
+	var raw string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/api_sellers/v2/offers/15/products" {
+			panic(r.Method + " " + r.URL.Path)
+		}
+		buf, err := io.ReadAll(r.Body)
+		if err != nil {
+			panic(err)
+		}
+		raw = string(buf)
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer srv.Close()
+
+	client, err := ggsel.New(ggsel.Options{APIKey: "test-key", BaseURL: srv.URL})
+	if err != nil {
+		panic(err)
+	}
+	err = client.CreateOfferProducts(context.Background(), 15, []ggsel.OfferProductInput{{Value: "KEY-1"}})
+	if err != nil {
+		panic(err)
+	}
+	if raw != `{"products":[{"value":"KEY-1"}]}` {
+		panic(raw)
 	}
 	// Output:
 }
