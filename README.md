@@ -43,6 +43,12 @@ page, err := client.ListOffers(ctx, ggsel.ListOffersParams{})
 
 Ключ v2 уходит в заголовок `Authorization` как есть, без `Bearer`.
 
+Без ключа пример не открывает сеть и завершается с кодом 0:
+
+```bash
+go run ./examples/list_offers
+```
+
 ## Контур v1
 
 Для заказа, уникального кода и чатов нужен `SellerID`. Token вызывающий не передаёт и не видит: клиент сам делает `apilogin` и подставляет query-параметр.

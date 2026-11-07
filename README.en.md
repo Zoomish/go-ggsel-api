@@ -25,6 +25,8 @@ client, err := ggsel.New(ggsel.Options{
 page, err := client.ListOffers(ctx, ggsel.ListOffersParams{})
 ```
 
+Without a key, `go run ./examples/list_offers` prints a notice and exits 0.
+
 ## v1
 
 Orders, unique codes, and chats need `SellerID`. The caller never passes or reads the token. The client signs in and caches it until `valid_thru`.

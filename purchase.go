@@ -12,6 +12,7 @@ import (
 // InvoiceState — состояние счёта v1.
 type InvoiceState int
 
+// Состояния счёта: 1 создан, 2 отменён, 3 оплачен, 4 выполнен, 5 возвращён.
 const (
 	InvoiceStateCreated   InvoiceState = 1
 	InvoiceStateCanceled  InvoiceState = 2
@@ -23,6 +24,7 @@ const (
 // FeedbackType — тип отзыва покупателя.
 type FeedbackType string
 
+// Значения типа отзыва.
 const (
 	FeedbackPositive FeedbackType = "positive"
 	FeedbackNegative FeedbackType = "negative"
