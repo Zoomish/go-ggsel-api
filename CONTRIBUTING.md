@@ -1,6 +1,6 @@
 # Участие
 
-Нужны Go 1.26 и, если обновляете снимок API, Python 3. Парсер снимка использует только стандартную библиотеку.
+Нужны Go 1.26. Локальный съёмщик документации в репозиторий не входит.
 
 Перед pull request:
 
@@ -13,15 +13,11 @@ make test
 
 ## Снимок API
 
-[docs/src/extract.py](docs/src/extract.py) не правьте, чтобы «починить» расхождение с сайтом. Он снимает публичную документацию как есть.
+В git лежат оба контракта: [testdata/seller-api-v1.openapi.json](testdata/seller-api-v1.openapi.json) и [testdata/seller-api-v2.openapi.json](testdata/seller-api-v2.openapi.json). `go test` сверяет enum v2 со вторым файлом и проверяет, что в первом есть `apilogin`.
 
-Обновление контракта:
+Раз в месяц workflow запускает `go run ./cmd/docscheck`. Команда читает живую документацию и сравнивает пути, схемы и авторизацию с этими двумя файлами. Дату в `info` она не учитывает. Python-папка `docs/` в репозиторий не входит.
 
-```bash
-python docs/src/extract.py
-```
-
-Просмотрите diff `docs/seller-api-v1.openapi.json` и `docs/seller-api-v2.openapi.json`. Потом обновите типы и тесты клиента и допишите [CHANGELOG.md](CHANGELOG.md). Проверка без записи: `python docs/src/extract.py --check`.
+Если сверка разошлась, локально `go run ./cmd/docscheck -write`, затем типы, тесты и [CHANGELOG.md](CHANGELOG.md). Короткий diff: `go run ./cmd/docscheck -diff`.
 
 ## Чего не должно быть в PR
 
@@ -37,4 +33,4 @@ API-ключа продавца, token, sign и файла `.env`.
 
 Тег имеет вид `v0.1.0`, не `v2.0.0`. Seller API v2 — это контур внутри того же модуля. После `git push` тега откройте https://pkg.go.dev/github.com/Zoomish/go-ggsel-api, чтобы индекс забрал версию.
 
-Ежемесячная сверка снимка с сайтом запускается только с ветки по умолчанию. GitHub отключает scheduled workflow, если в репозитории долго нет активности.
+Ежемесячный workflow сверяет оба снимка с сайтом и отдельно гоняет `go test`. Он живёт только на ветке по умолчанию и засыпает, если в репозитории долго нет активности.

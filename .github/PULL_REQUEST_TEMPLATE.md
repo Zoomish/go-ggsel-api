@@ -6,7 +6,7 @@
 
 ## Снимок API
 
-- [ ] `docs/seller-api-v1.openapi.json` и `docs/seller-api-v2.openapi.json` не менялись
+- [ ] `testdata/seller-api-v1.openapi.json` и `testdata/seller-api-v2.openapi.json` не менялись
 - [ ] менялись: типы, тесты и CHANGELOG обновлены
 
 ## Секреты

@@ -99,7 +99,7 @@ if ggsel.IsUnauthorized(err) {
 
 ## Контракт
 
-Пути и поля взяты из снимка документации, не из живого сайта. Как устроен снимок: [docs/README.md](docs/README.md). Клиент на seller.ggsel.com сам не ходит за спецификацией.
+Пути и поля взяты из публичной документации Seller API. Клиент на seller.ggsel.com за спецификацией не ходит. Оба снимка лежат в [testdata/seller-api-v1.openapi.json](testdata/seller-api-v1.openapi.json) и [testdata/seller-api-v2.openapi.json](testdata/seller-api-v2.openapi.json). Раз в месяц `go run ./cmd/docscheck` сравнивает их с сайтом.
 
 ## Безопасность
 

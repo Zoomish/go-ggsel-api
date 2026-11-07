@@ -53,7 +53,7 @@ Only safe GET calls are retried. A 401, a failed `apilogin`, and any POST or PAT
 
 The module currently covers v2 offers and categories, plus v1 orders, unique codes, and chats. Batch activate/pause/delete, options, products, the rest of v1, and the XML `shop_search.asp` method are not included. Method list: [pkg.go.dev](https://pkg.go.dev/github.com/Zoomish/go-ggsel-api).
 
-The contract snapshot is described in [docs/README.md](docs/README.md). Report vulnerabilities as in [SECURITY.md](SECURITY.md).
+Paths and fields follow the public Seller API documentation. The module does not fetch the spec. Both snapshots are [testdata/seller-api-v1.openapi.json](testdata/seller-api-v1.openapi.json) and [testdata/seller-api-v2.openapi.json](testdata/seller-api-v2.openapi.json). `go run ./cmd/docscheck` compares them with the live docs once a month. Report vulnerabilities as in [SECURITY.md](SECURITY.md).
 
 ## License
 

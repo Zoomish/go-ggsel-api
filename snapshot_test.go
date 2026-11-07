@@ -9,7 +9,11 @@ import (
 
 func TestSnapshotEnumsMatchConstants(t *testing.T) {
 	t.Parallel()
-	doc := openAPI(t, "docs/seller-api-v2.openapi.json")
+	doc := openAPI(t, "testdata/seller-api-v2.openapi.json")
+	v1 := openAPI(t, "testdata/seller-api-v1.openapi.json")
+	if _, ok := v1.object("paths")["/api_sellers/api/apilogin"]; !ok {
+		t.Fatal("v1 snapshot has no apilogin")
+	}
 	offers := doc.object("paths").object("/api_sellers/v2/offers")
 	list := offers.object("get")
 	create := offers.object("post").object("requestBody").object("content").object("application/json").object("schema").object("properties")
