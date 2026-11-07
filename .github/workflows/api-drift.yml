@@ -1,0 +1,143 @@
+name: API drift
+
+on:
+  schedule:
+    - cron: "17 6 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: api-drift
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compare snapshot with live docs
+        id: check
+        continue-on-error: true
+        run: python docs/src/extract.py --check
+      - name: Print contract diff
+        id: diff
+        if: steps.check.outcome == 'failure'
+        continue-on-error: true
+        run: |
+          python docs/src/diff_contract.py > drift.txt 2>&1
+          status=$?
+          cat drift.txt
+          exit "$status"
+      - name: Open or update the drift issue
+        if: steps.check.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const label = 'api-drift';
+            const { owner, repo } = context.repo;
+            try {
+              await github.rest.issues.getLabel({ owner, repo, name: label });
+            } catch (err) {
+              if (err.status !== 404) throw err;
+              await github.rest.issues.createLabel({
+                owner,
+                repo,
+                name: label,
+                color: 'b60205',
+                description: 'Seller API snapshot differs from the live docs',
+              });
+            }
+            let diff = '';
+            if (fs.existsSync('drift.txt')) {
+              diff = fs.readFileSync('drift.txt', 'utf8');
+            }
+            if (diff.length > 60000) {
+              diff = diff.slice(0, 60000) + '\n... truncated';
+            }
+            const body = [
+              'Снимок Seller API в `docs/` разошёлся с живой документацией.',
+              'Workflow файлы снимка не перезаписывает. Обновление локально: `python docs/src/extract.py`, затем типы, тесты и CHANGELOG.',
+              '',
+              '```',
+              diff || '(diff недоступен)',
+              '```',
+            ].join('\n');
+            const open = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: 'open',
+              labels: label,
+              per_page: 20,
+            });
+            if (open.data.length === 0) {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title: 'Снимок Seller API разошёлся с документацией',
+                body,
+                labels: [label],
+              });
+              return;
+            }
+            for (const issue of open.data) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issue.number,
+                body,
+              });
+            }
+      - name: Close the drift issue when the snapshot matches
+        if: steps.check.outcome == 'success'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const label = 'api-drift';
+            const { owner, repo } = context.repo;
+            const open = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: 'open',
+              labels: label,
+              per_page: 20,
+            });
+            for (const issue of open.data) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issue.number,
+                body: 'Сверка снова совпала со снимком в репозитории.',
+              });
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: issue.number,
+                state: 'closed',
+              });
+            }
+      - name: Fail the job when the snapshot differs
+        if: steps.check.outcome == 'failure'
+        run: exit 1
+
+  client:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: test
+        run: go test ./...
+      - name: vet
+        run: go vet ./...
