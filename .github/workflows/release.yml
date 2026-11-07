@@ -13,12 +13,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Require a v0 tag
+      - name: Require a v0 or v1 tag
         run: |
           case "${GITHUB_REF_NAME}" in
-            v0.*) ;;
+            v0.*|v1.*) ;;
             *)
-              echo "tag must be v0.x.y, not ${GITHUB_REF_NAME}"
+              echo "tag must be v0.x.y or v1.x.y, not ${GITHUB_REF_NAME}"
               exit 1
               ;;
           esac
