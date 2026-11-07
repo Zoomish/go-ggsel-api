@@ -92,6 +92,29 @@ func TestSnapshotStockEnums(t *testing.T) {
 	same("goods currency", enumAt(t, goods.object("currency")), []string{string(GoodsCurrencyUSD), string(GoodsCurrencyEUR), string(GoodsCurrencyRUB)})
 	same("goods lang", enumAt(t, goods.object("lang")), []string{string(LangRU), string(LangEN)})
 
+	langEnum := []string{string(LangRU), string(LangEN)}
+	categoryLang := headerSchema(t, v1.object("paths").object("/api_sellers/api/categories").object("get"), "lang")
+	same("category lang", enumAt(t, categoryLang), langEnum)
+	if categoryLang["default"] != string(LangRU) {
+		t.Fatalf("category lang default = %v", categoryLang["default"])
+	}
+	productLang := headerSchema(t, v1.object("paths").object("/api_sellers/api/products/list").object("get"), "lang")
+	same("product lang", enumAt(t, productLang), langEnum)
+	if productLang["default"] != string(LangRU) {
+		t.Fatalf("product lang default = %v", productLang["default"])
+	}
+	reviewLocale := headerSchema(t, reviews, "locale")
+	same("review locale header", enumAt(t, reviewLocale), langEnum)
+	if reviewLocale["default"] != string(LangRU) {
+		t.Fatalf("review locale default = %v", reviewLocale["default"])
+	}
+	if got := headerSchema(t, v1.object("paths").object("/api_sellers/api/seller-last-sales").object("get"), "locale")["default"]; got != "ru" {
+		t.Fatalf("last sales locale default = %v", got)
+	}
+	if got := headerSchema(t, v2.object("paths").object("/api_sellers/v2/offers").object("get"), "locale")["default"]; got != "ru" {
+		t.Fatalf("offer locale default = %v", got)
+	}
+
 	task := v1.object("paths").object("/api_sellers/api/product/edit/UpdateProductsTaskStatus").object("get").object("responses").object("200").object("content").object("application/json").object("schema").object("properties").object("Status")
 	got := enumInts(t, task["enum"])
 	want := []int{int(ProductTaskStatus1), int(ProductTaskStatus2), int(ProductTaskStatus3)}
@@ -100,6 +123,29 @@ func TestSnapshotStockEnums(t *testing.T) {
 	if !slices.Equal(got, want) {
 		t.Fatalf("task status enum = %v, constants = %v", got, want)
 	}
+}
+
+func headerSchema(t *testing.T, op openDoc, name string) openDoc {
+	t.Helper()
+	params, _ := op["parameters"].([]any)
+	var found openDoc
+	var headers []string
+	for _, item := range params {
+		param, _ := item.(map[string]any)
+		if param["in"] != "header" {
+			continue
+		}
+		got, _ := param["name"].(string)
+		headers = append(headers, got)
+		if got == name {
+			schema, _ := param["schema"].(map[string]any)
+			found = schema
+		}
+	}
+	if len(headers) != 1 || headers[0] != name || found == nil {
+		t.Fatalf("headers = %v, want %s", headers, name)
+	}
+	return found
 }
 
 func queryParams(t *testing.T, op openDoc) []string {
